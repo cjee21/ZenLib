@@ -106,3 +106,37 @@ jobs:
       - name: Build project using make
         shell: bash
         run: make -C build -j4
+
+  run-tests:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [ 'master', 'safety' ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.branch }}
+          path: source_repo
+      - name: Checkout Tests
+        uses: actions/checkout@v6
+        with:
+          ref: gtest
+          path: test_repo
+      - name: Align Directory Structure
+        run: |
+          mv source_repo/Source/ZenLib ./ZenLib
+          mv test_repo/Source/Tests ./Tests
+      - name: Configure and Build Tests with CMake
+        run: |
+          cd Tests
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -DENABLE_SANITIZERS=ON ..
+          cmake --build .
+      - name: Run Tests via CTest
+        run: |
+          cd Tests/build
+          ctest --output-on-failure
